@@ -1,0 +1,33 @@
+# OS/IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Node
+node_modules/
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*.ipynb_checkpoints
+.venv/
+.env
+.env.*
+
+# Build/Artifacts
+dist/
+build/
+coverage/
+
+# Data/Models (держим вне гита)
+data/
+datasets/
+checkpoints/
+artifacts/
+*.pt
+*.pth
+*.onnx
+*.h5
+*.ckpt
