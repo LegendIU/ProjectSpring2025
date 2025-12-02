@@ -31,3 +31,9 @@ artifacts/
 *.onnx
 *.h5
 *.ckpt
+
+
+uploads/
+
+ml/annotations
+ml/images
