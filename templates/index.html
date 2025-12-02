@@ -1,0 +1,285 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dog Breed Classifier</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        
+        .upload-section {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .upload-btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+        
+        .upload-btn:hover {
+            background-color: #45a049;
+        }
+        
+        .preview-container {
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .preview-image {
+            max-width: 300px;
+            max-height: 300px;
+            border: 2px dashed #ccc;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        
+        .predict-btn {
+            background-color: #008CBA;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        
+        .predict-btn:hover {
+            background-color: #007B9A;
+        }
+        
+        .predict-btn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        .results-section {
+            margin-top: 30px;
+        }
+        
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin: 10px 0;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .breed-name {
+            font-weight: bold;
+            flex: 1;
+        }
+        
+        .probability-bar {
+            width: 200px;
+            height: 20px;
+            background-color: #e0e0e0;
+            border-radius: 10px;
+            margin: 0 15px;
+            overflow: hidden;
+        }
+        
+        .probability-fill {
+            height: 100%;
+            background-color: #4CAF50;
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+        
+        .probability-value {
+            font-weight: bold;
+            min-width: 60px;
+            text-align: right;
+        }
+        
+        .loading {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .error {
+            color: #d32f2f;
+            background-color: #ffebee;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        
+        .success {
+            color: #2e7d32;
+            background-color: #e8f5e9;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐕 Dog Breed Classifier</h1>
+        
+        <div class="upload-section">
+            <input type="file" id="fileInput" class="file-input" accept=".png,.jpg,.jpeg">
+            <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                Choose Image
+            </button>
+            <p id="fileName"></p>
+            
+            <div class="preview-container">
+                <img id="previewImage" class="preview-image hidden" alt="Image preview">
+            </div>
+            
+            <button id="predictBtn" class="predict-btn" disabled>Predict Breed</button>
+        </div>
+        
+        <div id="loading" class="loading hidden">
+            <p>Analyzing image... Please wait</p>
+        </div>
+        
+        <div id="error" class="error hidden"></div>
+        <div id="success" class="success hidden"></div>
+        
+        <div id="resultsSection" class="results-section hidden">
+            <h2>Prediction Results (Top 5)</h2>
+            <div id="resultsContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const fileName = document.getElementById('fileName');
+        const previewImage = document.getElementById('previewImage');
+        const predictBtn = document.getElementById('predictBtn');
+        const loading = document.getElementById('loading');
+        const error = document.getElementById('error');
+        const success = document.getElementById('success');
+        const resultsSection = document.getElementById('resultsSection');
+        const resultsContainer = document.getElementById('resultsContainer');
+
+        // Handle file selection
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                fileName.textContent = file.name;
+                
+                // Preview image
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewImage.src = e.target.result;
+                    previewImage.classList.remove('hidden');
+                }
+                reader.readAsDataURL(file);
+                
+                predictBtn.disabled = false;
+            } else {
+                fileName.textContent = '';
+                previewImage.classList.add('hidden');
+                predictBtn.disabled = true;
+            }
+        });
+
+        // Handle prediction
+        predictBtn.addEventListener('click', async function() {
+            const file = fileInput.files[0];
+            if (!file) {
+                showError('Please select an image first');
+                return;
+            }
+
+            // Show loading, hide results and errors
+            loading.classList.remove('hidden');
+            error.classList.add('hidden');
+            success.classList.add('hidden');
+            resultsSection.classList.add('hidden');
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                loading.classList.add('hidden');
+
+                if (data.success) {
+                    displayResults(data.predictions);
+                    success.textContent = 'Prediction completed successfully!';
+                    success.classList.remove('hidden');
+                } else {
+                    showError(data.error || 'An error occurred during prediction');
+                }
+            } catch (err) {
+                loading.classList.add('hidden');
+                showError('Network error: ' + err.message);
+            }
+        });
+
+        function displayResults(predictions) {
+            resultsContainer.innerHTML = '';
+            
+            predictions.forEach(item => {
+                const resultItem = document.createElement('div');
+                resultItem.className = 'result-item';
+                
+                resultItem.innerHTML = `
+                    <div class="breed-name">${item.breed}</div>
+                    <div class="probability-bar">
+                        <div class="probability-fill" style="width: ${item.probability}%"></div>
+                    </div>
+                    <div class="probability-value">${item.probability}%</div>
+                `;
+                
+                resultsContainer.appendChild(resultItem);
+            });
+            
+            resultsSection.classList.remove('hidden');
+        }
+
+        function showError(message) {
+            error.textContent = message;
+            error.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
